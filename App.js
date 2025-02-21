@@ -1,52 +1,47 @@
-import { useState } from "react";
+const express = require("express");
+const cors = require("cors");
 
-export default function Home() {
-  const [jsonInput, setJsonInput] = useState("");
-  const [response, setResponse] = useState(null);
-  const [selectedOptions, setSelectedOptions] = useState([]);
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-  const handleSubmit = async () => {
+const USER_ID = "john_doe_17091999";
+const EMAIL = "john@xyz.com";
+const ROLL_NUMBER = "ABCD123";
+
+app.post("/bfhl", (req, res) => {
     try {
-      const parsedData = JSON.parse(jsonInput);
-      const res = await fetch("https://your-backend-url.com/bfhl", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsedData),
-      });
-      const data = await res.json();
-      setResponse(data);
+        if (!req.body || !req.body.data || !Array.isArray(req.body.data)) {
+            return res.status(400).json({ is_success: false, message: "Invalid input format" });
+        }
+
+        let numbers = [];
+        let alphabets = [];
+
+        req.body.data.forEach(item => {
+            if (!isNaN(item)) numbers.push(item);
+            else if (typeof item === "string" && /^[a-zA-Z]$/.test(item)) alphabets.push(item);
+        });
+
+        let highest_alphabet = alphabets.length > 0 ? [alphabets.sort().slice(-1)[0]] : [];
+
+        res.json({
+            is_success: true,
+            user_id: USER_ID,
+            email: EMAIL,
+            roll_number: ROLL_NUMBER,
+            numbers,
+            alphabets,
+            highest_alphabet
+        });
     } catch (error) {
-      alert("Invalid JSON or API error");
+        res.status(500).json({ is_success: false, message: "Internal Server Error" });
     }
-  };
+});
 
-  return (
-    <div className="container">
-      <h1>BFHL API</h1>
-      <textarea
-        rows="4"
-        cols="50"
-        value={jsonInput}
-        onChange={(e) => setJsonInput(e.target.value)}
-        placeholder='{"data": ["A", "1", "5", "B"]}'
-      />
-      <button onClick={handleSubmit}>Submit</button>
+app.get("/bfhl", (req, res) => {
+    res.json({ operation_code: 1 });
+});
 
-      {response && (
-        <>
-          <select multiple onChange={(e) => setSelectedOptions([...e.target.selectedOptions].map(o => o.value))}>
-            <option value="alphabets">Alphabets</option>
-            <option value="numbers">Numbers</option>
-            <option value="highest_alphabet">Highest Alphabet</option>
-          </select>
-
-          <div>
-            {selectedOptions.includes("alphabets") && <p>Alphabets: {JSON.stringify(response.alphabets)}</p>}
-            {selectedOptions.includes("numbers") && <p>Numbers: {JSON.stringify(response.numbers)}</p>}
-            {selectedOptions.includes("highest_alphabet") && <p>Highest Alphabet: {JSON.stringify(response.highest_alphabet)}</p>}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
